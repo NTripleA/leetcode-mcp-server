@@ -654,4 +654,8 @@ export class LeetCodeCNService implements LeetCodeBaseService {
     isCN(): boolean {
         return true;
     }
+
+    async reauthenticate(sessionCookie: string): Promise<void> {
+        await this.credential.init(sessionCookie);
+    }
 }

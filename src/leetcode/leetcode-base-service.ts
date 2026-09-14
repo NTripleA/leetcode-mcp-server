@@ -154,6 +154,15 @@ export interface LeetCodeBaseService {
     isAuthenticated(): boolean;
 
     /**
+     * Re-authenticates this service in place using a new session cookie,
+     * updating the shared credential so subsequent calls use the new session
+     * without requiring the server to restart.
+     *
+     * @param sessionCookie - Raw LEETCODE_SESSION cookie value
+     */
+    reauthenticate(sessionCookie: string): Promise<void>;
+
+    /**
      * Runs code against LeetCode's interpreter (Run) and polls the check endpoint
      * until a non-pending state is reached.
      *

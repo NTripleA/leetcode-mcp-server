@@ -5,10 +5,17 @@ import minimist from "minimist";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { performBrowserLogin } from "./auth/browser-login.js";
+import {
+    LeetCodeSite,
+    loadStoredSession,
+    saveStoredSession
+} from "./auth/credentials-store.js";
 import { LeetCodeBaseService } from "./leetcode/leetcode-base-service.js";
 import { LeetCodeServiceFactory } from "./leetcode/leetcode-service-factory.js";
 import { registerProblemResources } from "./mcp/resources/problem-resources.js";
 import { registerSolutionResources } from "./mcp/resources/solution-resources.js";
+import { registerAuthTools } from "./mcp/tools/auth-tools.js";
 import { registerContestTools } from "./mcp/tools/contest-tools.js";
 import { registerNoteTools } from "./mcp/tools/note-tools.js";
 import { registerProblemTools } from "./mcp/tools/problem-tools.js";
@@ -44,6 +51,11 @@ function parseArgs() {
         logger.info(`LeetCode MCP Server - Model Context Protocol server for LeetCode
 
   Usage: leetcode-mcp-server [options]
+         leetcode-mcp-server login [--site global|cn]
+
+  The 'login' subcommand opens a browser window to sign in to LeetCode and
+  caches the resulting session under ~/.leetcode-mcp-server/credentials.json,
+  so future server starts are pre-authenticated without --session/LEETCODE_SESSION.
 
   Options:
     --site, -s <site>              LeetCode API site: 'global' (leetcode.com) or 'cn' (leetcode.cn), default is 'global'
@@ -128,6 +140,7 @@ function createMcpServer(leetcodeService: LeetCodeBaseService): McpServer {
         version: packageJSON.version
     });
 
+    registerAuthTools(server, leetcodeService);
     registerProblemTools(server, leetcodeService);
     registerUserTools(server, leetcodeService);
     registerContestTools(server, leetcodeService);
@@ -142,16 +155,51 @@ function createMcpServer(leetcodeService: LeetCodeBaseService): McpServer {
 }
 
 /**
+ * Runs the `login` subcommand: opens a browser for the user to sign in to
+ * LeetCode, then caches the resulting session for future server starts.
+ */
+async function runLoginCommand(): Promise<void> {
+    const args = minimist(process.argv.slice(3), {
+        string: ["site"],
+        alias: { s: "site" }
+    });
+    const site = (
+        args.site ||
+        process.env.LEETCODE_SITE ||
+        "global"
+    ).toLowerCase();
+
+    if (site !== "global" && site !== "cn") {
+        logger.error("The site must be either 'global' or 'cn'");
+        process.exit(1);
+    }
+
+    logger.info(
+        `Opening a browser to sign in to LeetCode (${site})... complete sign-in there.`
+    );
+    const session = await performBrowserLogin(site as LeetCodeSite);
+    saveStoredSession(site as LeetCodeSite, session);
+    logger.info(
+        "Signed in. The session has been cached under ~/.leetcode-mcp-server/credentials.json " +
+            "and will be used automatically on future server starts."
+    );
+}
+
+/**
  * Main function that initializes and starts the LeetCode MCP Server.
  */
 async function main() {
+    if (process.argv[2] === "login") {
+        await runLoginCommand();
+        return;
+    }
+
     const options = parseArgs();
+    const site = options.site as LeetCodeSite;
+    const session = options.session || loadStoredSession(site);
 
     const leetcodeService: LeetCodeBaseService =
-        await LeetCodeServiceFactory.createService(
-            options.site,
-            options.session
-        );
+        await LeetCodeServiceFactory.createService(site, session);
 
     if (options.transport === "http") {
         await startStreamableHttpTransport({

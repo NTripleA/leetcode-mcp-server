@@ -518,4 +518,8 @@ export class LeetCodeGlobalService implements LeetCodeBaseService {
     isCN(): boolean {
         return false;
     }
+
+    async reauthenticate(sessionCookie: string): Promise<void> {
+        await this.credential.init(sessionCookie);
+    }
 }

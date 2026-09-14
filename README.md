@@ -183,6 +183,12 @@ npx -y @jinzcdev/leetcode-mcp-server --transport http --port 3000 --site global 
 | **get_problem**         |   ✅   | ✅  |      ❌       | Retrieves details for a specific LeetCode problem            |
 | **search_problems**     |   ✅   | ✅  |      ❌       | Searches for LeetCode problems with multiple filter criteria |
 
+### Auth
+
+| Tool               | Global | CN  | Auth Required | Description                                                          |
+| ------------------ | :----: | :-: | :-----------: | -------------------------------------------------------------------- |
+| **leetcode_login** |   ✅   | ✅  |      ❌       | Opens a browser window to sign in to LeetCode and caches the session |
+
 ### Users
 
 | Tool                              | Global | CN  | Auth Required | Description                                                  |
@@ -383,7 +389,23 @@ npx -y @jinzcdev/leetcode-mcp-server --transport http --port 3000 --site global 
 
 ## Authentication
 
-User-specific data access requires LeetCode session authentication:
+User-specific data access requires LeetCode session authentication. There are two ways to authenticate:
+
+### Option 1: Automated sign-in (recommended)
+
+Requires Google Chrome or Microsoft Edge to be installed.
+
+- **From within a chat**: call the `leetcode_login` tool. It opens a real browser window at the LeetCode login page — log in there as normal (password, captcha, 2FA all handled by LeetCode itself). Once you finish, the tool captures the resulting session, applies it to the running server immediately, and caches it for future runs.
+- **From a terminal**, before starting the server:
+  ```bash
+  npx -y @jinzcdev/leetcode-mcp-server login --site global
+  ```
+
+Either path caches the session under `~/.leetcode-mcp-server/credentials.json` (permissions restricted to your user). Future server starts pick it up automatically — no `--session`/`LEETCODE_SESSION` needed — unless one is explicitly provided, which always takes precedence over the cached session (see the [Priority Note](#mcp-client-configuration-stdio) above).
+
+Note: tools that were unavailable at server startup because no session was configured yet may require reconnecting the MCP server (restarting the client's connection) to appear in the tool list, even after `leetcode_login` succeeds.
+
+### Option 2: Manual cookie
 
 1. Log in to LeetCode ([Global](https://leetcode.com) or [China](https://leetcode.cn) site)
 2. Extract `LEETCODE_SESSION` cookie from browser developer tools

@@ -48,6 +48,7 @@
         "leetcode-query": "^2.0.1",
         "minimist": "^1.2.8",
         "pino": "^9.6.0",
+        "playwright-core": "^1.62.1",
         "ts-node": "^10.9.2",
         "zod": "^3.24.2"
     },
